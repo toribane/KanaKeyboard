@@ -49,13 +49,13 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
     private ViewGroup mCandidateLayout;
     private JiskanaKeyboard mJiskanaKeyboard;
     private SymbolKeyboard mSymbolKeyboard;
-
+    //
     private StringBuilder mInputText;
     private int mConvertLength;
-    private boolean isPrediction;
     private int mCandidateIndex;
     private Dictionary mDictionary;
-    private List<Candidate> mCandidates;
+    private Candidate[] mCandidates;
+    //
     private boolean mConvertHalfKana;
     private boolean mConvertWideLatin;
 
@@ -138,30 +138,15 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
     }
 
     private void commitCandidateText() {
-        Candidate candidate = mCandidates.get(mCandidateIndex);
+        Candidate candidate = mCandidates[mCandidateIndex];
         mDictionary.addLearning(candidate.key, candidate.value);
 
         mCandidateLayout.removeAllViewsInLayout();
         mCandidateIndex = -1;
 
-        if (isPrediction) {
-            icCommitText(candidate.value);
-            mInputText.setLength(0);
-            mConvertLength = 0;
-            buildPredictionCandidate();
-        } else {
-            if (mConvertLength == mInputText.length()) {
-                icCommitText(candidate.value);
-                mInputText.setLength(0);
-                mConvertLength = 0;
-                buildPredictionCandidate();
-            } else {
-                icCommitText(candidate.value);
-                mInputText.delete(0, mConvertLength);
-                mConvertLength = mInputText.length();
-                buildConversionCandidate();
-            }
-        }
+        icCommitText(candidate.value);
+        mInputText.setLength(0);
+        mConvertLength = 0;
     }
 
     public void handleString(String s) {
@@ -202,6 +187,24 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         buildConversionCandidate();
     }
 
+    public void handleBackspace() {
+        if (mInputText.length() == 0) {
+            sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
+            return;
+        }
+        if (mCandidateIndex >= 0) {
+            // 候補選択中→候補未選択に戻す
+            mCandidateIndex = -1;
+            selectCandidate();
+            return;
+        }
+        // 候補未選択→入力テキストの最後の文字を削除して候補を作り直す
+        mInputText.deleteCharAt(mInputText.length() - 1);
+        mConvertLength = mInputText.length();
+        icSetComposingText();
+        buildConversionCandidate();
+    }
+
     public void handleEnter() {
         if (mInputText.length() == 0) {
             sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER);
@@ -229,28 +232,6 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         selectCandidate();
     }
 
-    public void handleBackspace() {
-        if (mInputText.length() == 0) {
-            sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL);
-            return;
-        }
-        if (mCandidateIndex >= 0) {
-            // 候補選択中→候補未選択に戻す
-            mCandidateIndex = -1;
-            selectCandidate();
-            return;
-        }
-        // 候補未選択→入力テキストの最後の文字を削除して候補を作り直す
-        mInputText.deleteCharAt(mInputText.length() - 1);
-        mConvertLength = mInputText.length();
-        icSetComposingText();
-        if (mInputText.length() == 0) {
-            buildPredictionCandidate();
-        } else {
-            buildConversionCandidate();
-        }
-    }
-
     public void handleCursorLeft() {
         if (mInputText.length() == 0) {
             sendDownUpKeyEvents(KeyEvent.KEYCODE_DPAD_LEFT);
@@ -261,7 +242,6 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
             mConvertLength = 1;
         }
         icSetComposingText();
-        isPrediction = false;
         buildConversionCandidate();
     }
 
@@ -275,7 +255,6 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
             mConvertLength = mInputText.length();
         }
         icSetComposingText();
-        isPrediction = false;
         buildConversionCandidate();
     }
 
@@ -315,18 +294,6 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         }
         mJiskanaKeyboard.setVisibility(View.VISIBLE);
         mSymbolKeyboard.setVisibility(View.INVISIBLE);
-    }
-
-    /**
-     * 最後に確定した候補から予測候補を作り出す
-     */
-    private void buildPredictionCandidate() {
-        isPrediction = true;
-//        mCandidates = mDictionary.predict(mLastCandidate);
-        if (mCandidates == null) {
-            return;
-        }
-        setCandidateText();
     }
 
     private void onClickCandidateTextListener(View view) {
@@ -385,12 +352,33 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
     private final Word EOS = new Word("EOS", 0, 0);
 
     private void buildConversionCandidate() {
-        isPrediction = false;
-
         String str = mInputText.toString();
         int len = str.length();
 
         int nBest = 20;
+
+        Set<String> surfaces = new LinkedHashSet<>();// 追加順、重複なし
+
+        // 学習辞書から完全一致するものをすべて追加
+        ArrayList<String> learningWords = mDictionary.findLearningWord(str);
+        if (learningWords != null) {
+            surfaces.addAll(learningWords);
+        }
+
+        //
+        if (mConvertHalfKana) {
+            String s = Converter.toHalfKatakana(str);
+            if (!s.equals(str)) {
+                surfaces.add(s);
+            }
+        }
+        if (mConvertWideLatin) {
+            String s = Converter.toWideLatin(str);
+            if (!s.equals(str)) {
+                surfaces.add(s);
+            }
+        }
+
         // 参考：「日本語入力を支える技術」4.2 グラフの作成
         List<List<Node>> graph = new ArrayList<>();
         for (int i = 0; i <= (len + 1); i++) {
@@ -440,7 +428,6 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
             }
         }
         // 後半は優先度キューを使ってたどるノードを選んでいく
-        Set<String> surfaces = new LinkedHashSet<>();
 
         PriorityQueue<Node> pq = new PriorityQueue<>();
         // まず、優先度キューにゴールノード(EOS)を挿入する
@@ -470,23 +457,14 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
                 }
             }
         }
-        //
-        mCandidates = new ArrayList<>();
-        if (mConvertHalfKana) {
-            String s = Converter.toHalfKatakana(str);
-            if (!s.equals(str)) {
-                mCandidates.add(new Candidate(str, s));
-            }
-        }
-        if (mConvertWideLatin) {
-            String s = Converter.toWideLatin(str);
-            if (!s.equals(str)) {
-                mCandidates.add(new Candidate(str, s));
-            }
-        }
+
+        Set<Candidate> candidates = new LinkedHashSet<>();// 追加順、重複なし
+
         for (String surface : surfaces) {
-            mCandidates.add(new Candidate(str, surface));
+            candidates.add(new Candidate(str, surface));
         }
+        //
+        mCandidates = candidates.toArray(new Candidate[0]);
         setCandidateText();
     }
 

@@ -28,6 +28,7 @@ import java.nio.ShortBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import jdbm.RecordManager;
 import jdbm.RecordManagerFactory;
@@ -220,4 +221,16 @@ public class Dictionary {
         return list;
     }
 
+    public ArrayList<String> findLearningWord(String key) {
+        ArrayList<String> list = new ArrayList<>();
+        try {
+            String value = (String) mBTreeLearningDic.find(key);
+            if (value != null) {
+                String[] words = value.split("\t");
+                list.addAll(Arrays.asList(words));
+            }
+        } catch (IOException ignored) {
+        }
+        return list;
+    }
 }
