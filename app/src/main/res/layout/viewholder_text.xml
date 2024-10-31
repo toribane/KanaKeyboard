@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/text_view"
+    android:layout_width="wrap_content"
+    android:layout_height="@dimen/softkey_height"
+    android:layout_gravity="center"
+    android:background="@drawable/symbol_text_background"
+    android:gravity="center"
+    android:minWidth="@dimen/softkey_height"
+    android:textColor="@color/key_foreground"
+    android:textSize="24dp"
+    tools:ignore="SpUsage" />

@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="black">#FF000000</color>
+    <color name="gray1">#FF111111</color>
+    <color name="gray2">#FF222222</color>
+    <color name="gray3">#FF333333</color>
+    <color name="gray4">#FF444444</color>
+    <color name="gray5">#FF555555</color>
+    <color name="gray6">#FF666666</color>
+    <color name="gray7">#FF777777</color>
+    <color name="gray8">#FF888888</color>
+    <color name="gray9">#FF999999</color>
+    <color name="grayA">#FFAAAAAA</color>
+    <color name="grayB">#FFBBBBBB</color>
+    <color name="grayC">#FFCCCCCC</color>
+    <color name="grayD">#FFDDDDDD</color>
+    <color name="grayE">#FFEEEEEE</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="background">#FF111111</color>
+    <color name="character_key_background">#FF444444</color>
+    <color name="function_key_background">#FF333333</color>
+    <color name="key_foreground">#FFFFFFFF</color>
+    <color name="select_bg">#8000FF00</color>
+</resources>

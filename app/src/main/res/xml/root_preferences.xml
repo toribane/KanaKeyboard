@@ -1,0 +1,56 @@
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <PreferenceCategory
+        android:title="キーボード設定"
+        app:iconSpaceReserved="false">
+        <ListPreference
+            android:defaultValue="400"
+            android:entries="@array/key_repeat_timeout_entries"
+            android:entryValues="@array/key_repeat_timeout_values"
+            android:key="key_repeat_timeout"
+            app:iconSpaceReserved="false"
+            app:title="キーリピートが始まるまでの時間"
+            app:useSimpleSummaryProvider="true" />
+        <ListPreference
+            android:defaultValue="50"
+            android:entries="@array/key_repeat_delay_entries"
+            android:entryValues="@array/key_repeat_delay_values"
+            android:key="key_repeat_delay"
+            app:iconSpaceReserved="false"
+            app:title="キーリピートの間隔"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="変換設定"
+        app:iconSpaceReserved="false">
+        <SwitchPreference
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:defaultValue="false"
+            android:key="convert_half_kana"
+            android:title="候補に半角カナを含める"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+        <SwitchPreference
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:defaultValue="false"
+            android:key="convert_wide_latin"
+            android:title="候補に全角英数を含める"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+    <PreferenceCategory
+        android:title="ユーザー辞書"
+        app:iconSpaceReserved="false">
+        <Preference
+            app:iconSpaceReserved="false"
+            app:key="learning_dictionary_tool"
+            app:summary="学習辞書ツールを起動します"
+            app:title="学習辞書ツール">
+            <intent
+                android:targetClass="io.github.toribane.kkbd.LearningDictionaryTool"
+                android:targetPackage="io.github.toribane.kkbd" />
+        </Preference>
+    </PreferenceCategory>
+</PreferenceScreen>
