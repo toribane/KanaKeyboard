@@ -154,9 +154,8 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
             // 候補選択中なら確定する
             commitCandidateText();
         }
-        mInputText.append(s);
-        icSetComposingText();
-        buildConversionCandidate();
+        // 直接コミット
+        icCommitText(s);
     }
 
     public void handleCharacter(char c) {
