@@ -9,5 +9,5 @@
     android:gravity="center"
     android:minWidth="@dimen/softkey_height"
     android:textColor="@color/key_foreground"
-    android:textSize="24dp"
+    android:textSize="20dp"
     tools:ignore="SpUsage" />

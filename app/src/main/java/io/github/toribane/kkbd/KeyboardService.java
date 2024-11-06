@@ -15,7 +15,6 @@
  */
 package io.github.toribane.kkbd;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
@@ -30,7 +29,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
-import android.widget.LinearLayout;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
@@ -45,15 +44,18 @@ import java.util.Set;
 
 public class KeyboardService extends InputMethodService  implements SharedPreferences.OnSharedPreferenceChangeListener {
 
+    // キーボード
+    private ViewGroup mKeyboardLayout;
     private View mCandidateView;
     private ViewGroup mCandidateLayout;
-    private JiskanaKeyboard mJiskanaKeyboard;
-    private SymbolKeyboard mSymbolKeyboard;
+    // シンボル
+    private ViewGroup mSymbolKeyboard;
+    //
+    private Dictionary mDictionary;
     //
     private StringBuilder mInputText;
     private int mConvertLength;
     private int mCandidateIndex;
-    private Dictionary mDictionary;
     private Candidate[] mCandidates;
     //
     private boolean mConvertHalfKana;
@@ -80,13 +82,13 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
 
     @Override
     public View onCreateInputView() {
-        @SuppressLint("InflateParams") LinearLayout layout = (LinearLayout) LayoutInflater.from(this).inflate(R.layout.input_layout, null);
+        FrameLayout layout = (FrameLayout) LayoutInflater.from(this).inflate(R.layout.input_layout, null);
+
+        mKeyboardLayout = layout.findViewById(R.id.keyboard_layout);
+        mSymbolKeyboard = layout.findViewById(R.id.emoji_keyboard);
 
         mCandidateView = layout.findViewById(R.id.candidate_view);
         mCandidateLayout = layout.findViewById(R.id.candidate_layout);
-
-        mJiskanaKeyboard = layout.findViewById(R.id.jiskana_keyboard);
-        mSymbolKeyboard = layout.findViewById(R.id.symbol_keyboard);
 
         return layout;
     }
@@ -99,7 +101,7 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         mConvertHalfKana = sharedPreferences.getBoolean("convert_half_kana", false);
         mConvertWideLatin = sharedPreferences.getBoolean("convert_wide_latin", false);
 
-        mJiskanaKeyboard.setVisibility(View.VISIBLE);
+        mKeyboardLayout.setVisibility(View.VISIBLE);
         mSymbolKeyboard.setVisibility(View.INVISIBLE);
 
         mInputText.setLength(0);
@@ -280,7 +282,8 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         if (mInputText.length() > 0) {
             commitInputText();
         }
-        mJiskanaKeyboard.setVisibility(View.INVISIBLE);
+
+        mKeyboardLayout.setVisibility(View.INVISIBLE);
         mSymbolKeyboard.setVisibility(View.VISIBLE);
     }
 
@@ -291,7 +294,7 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         if (mInputText.length() > 0) {
             commitInputText();
         }
-        mJiskanaKeyboard.setVisibility(View.VISIBLE);
+        mKeyboardLayout.setVisibility(View.VISIBLE);
         mSymbolKeyboard.setVisibility(View.INVISIBLE);
     }
 

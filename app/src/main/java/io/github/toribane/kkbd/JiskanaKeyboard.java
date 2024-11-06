@@ -21,6 +21,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -80,7 +81,6 @@ public class JiskanaKeyboard extends KeyboardLayout {
 
     public JiskanaKeyboard(Context context, AttributeSet attrs) {
         super(context, attrs);
-
         setOrientation(VERTICAL);
 
         mImageView = new ImageView(context);

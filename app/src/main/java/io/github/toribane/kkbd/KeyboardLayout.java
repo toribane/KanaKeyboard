@@ -36,6 +36,7 @@ import java.util.ArrayList;
 
 public class KeyboardLayout extends LinearLayout implements SharedPreferences.OnSharedPreferenceChangeListener {
 
+    //
     public final static int SOFTKEY_ID_SPACE = -1;
     public final static int SOFTKEY_ID_BACKSPACE = -2;
     public final static int SOFTKEY_ID_ENTER = -3;
@@ -43,11 +44,14 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
     public final static int SOFTKEY_ID_CURSOR_RIGHT = -5;
     public final static int SOFTKEY_ID_CURSOR_UP = -6;
     public final static int SOFTKEY_ID_CURSOR_DOWN = -7;
+    //
     public final static int SOFTKEY_ID_SHIFT = -8;
-    public final static int SOFTKEY_ID_SYMBOL = -9;
-    public final static int SOFTKEY_ID_KEYBOARD_VIEW = -10;
-    public final static int SOFTKEY_ID_SYMBOL_VIEW = -11;
-    public final static int SOFTKEY_ID_LANGUAGE = -12;
+    public final static int SOFTKEY_ID_KEYBOARD_VIEW = -9;
+    public final static int SOFTKEY_ID_SYMBOL_VIEW = -10;
+    public final static int SOFTKEY_ID_LANGUAGE = -11;
+    public final static int SOFTKEY_ID_SYMBOL_EMOJI = -12;
+    public final static int SOFTKEY_ID_SYMBOL_KIGOU = -13;
+    public final static int SOFTKEY_ID_SYMBOL_KEYBORD = -14;
 
     public Context mContext;
     public KeyboardService mKeyboardService;
@@ -64,6 +68,8 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
     public SoftKey mSymbolViewKey;
     public SoftKey mSymbolKey;
     public SoftKey mLanguageKey;
+    public SoftKey mSymbolEmojiKey;
+    public SoftKey mSymbolKigouKey;
 
     public ArrayList<SoftKey> mSoftKeys;
 
@@ -76,6 +82,7 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
     public Drawable mSymbolViewDrawable;
     public Drawable mSymbolEmojiDrawable;
     public Drawable mSymbolKigouDrawable;
+    //
     public Handler mRepeatHandler;
     public ImageView mImageView;
 
@@ -123,10 +130,10 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
         mShiftNoneDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_none, null);
         mShiftSingleDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_single, null);
         mShiftLockDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_lock, null);
-        mSymbolViewDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_view, null);
-        mSymbolEmojiDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_emoji, null);
-        mSymbolKigouDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_kigou, null);
-        mLanguageDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_language, null);
+//        mSymbolViewDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_view, null);
+//        mSymbolEmojiDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_emoji, null);
+//        mSymbolKigouDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_kigou, null);
+//        mLanguageDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_language, null);
 
         mLanguageJapaneseFlag = true;
         mShiftSingleFlag = false;
@@ -138,13 +145,21 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
         mShiftKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
         mShiftKey.setDrawable(mShiftNoneDrawable);
 
-        mSymbolKey = new SoftKey(SOFTKEY_ID_SYMBOL);
-        mSymbolKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
-        mSymbolKey.setDrawable(mSymbolKigouDrawable);
+        mSymbolEmojiKey = new SoftKey(SOFTKEY_ID_SYMBOL_EMOJI);
+        mSymbolEmojiKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
+        mSymbolEmojiKey.setDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_emoji, null));
+
+        mSymbolKigouKey = new SoftKey(SOFTKEY_ID_SYMBOL_KIGOU);
+        mSymbolKigouKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
+        mSymbolKigouKey.setDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_kigou, null));
+
+        mLanguageKey = new SoftKey(SOFTKEY_ID_LANGUAGE);
+        mLanguageKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
+        mLanguageKey.setDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_language, null));
 
         mSymbolViewKey = new SoftKey(SOFTKEY_ID_SYMBOL_VIEW);
         mSymbolViewKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
-        mSymbolViewKey.setDrawable(mSymbolViewDrawable);
+        mSymbolViewKey.setDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_view, null)); // ☺
 
         mKeyboardViewKey = new SoftKey(SOFTKEY_ID_KEYBOARD_VIEW);
         mKeyboardViewKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
@@ -172,10 +187,6 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
         mEnterKey = new SoftKey(SOFTKEY_ID_ENTER);
         mEnterKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
         mEnterKey.setCharacter('⏎');   // u23CE
-
-        mLanguageKey = new SoftKey(SOFTKEY_ID_LANGUAGE);
-        mLanguageKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
-        mLanguageKey.setDrawable(mLanguageDrawable);
 
     }
 
