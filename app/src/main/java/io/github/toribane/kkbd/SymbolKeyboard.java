@@ -57,9 +57,9 @@ public class SymbolKeyboard extends KeyboardLayout {
     private int mSymbolType;
     private int mSymbolGroupIndex;
     //
-    private LinearLayout mGroupView;
+    private final LinearLayout mGroupView;
     //
-    private HorizontalScrollView mHorizontalScrollView;
+    private final HorizontalScrollView mHorizontalScrollView;
     private ArrayList<String> mSymbolList;
 
     public SymbolKeyboard(Context context, AttributeSet attrs) {
@@ -156,7 +156,7 @@ public class SymbolKeyboard extends KeyboardLayout {
         mSymbolGroupIndex = mGroupView.indexOfChild(view);
         if (mSymbolType == SYMBOL_TYPE_EMOJI) {
             selectEmojiKeyboard();
-        }  else {
+        } else {
             selectKigouKeyboard();
         }
     }

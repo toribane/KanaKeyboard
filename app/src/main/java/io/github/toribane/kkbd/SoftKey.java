@@ -105,7 +105,6 @@ public class SoftKey {
         int right = (int) mRect.centerX() + r;
         int bottom = (int) mRect.centerY() + r;
         mDrawable.setBounds(left, top, right, bottom);
-        mDrawable.setTint(mForegroundColor);
         mDrawable.draw(canvas);
     }
 

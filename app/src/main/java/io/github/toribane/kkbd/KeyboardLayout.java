@@ -51,7 +51,6 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
     public final static int SOFTKEY_ID_LANGUAGE = -11;
     public final static int SOFTKEY_ID_SYMBOL_EMOJI = -12;
     public final static int SOFTKEY_ID_SYMBOL_KIGOU = -13;
-    public final static int SOFTKEY_ID_SYMBOL_KEYBORD = -14;
 
     public Context mContext;
     public KeyboardService mKeyboardService;
@@ -66,7 +65,6 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
     public SoftKey mShiftKey;
     public SoftKey mSpaceKey;
     public SoftKey mSymbolViewKey;
-    public SoftKey mSymbolKey;
     public SoftKey mLanguageKey;
     public SoftKey mSymbolEmojiKey;
     public SoftKey mSymbolKigouKey;
@@ -75,13 +73,11 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
 
     public Bitmap mBitmap;
     public Canvas mCanvas;
-    public Drawable mLanguageDrawable;
     public Drawable mShiftLockDrawable;
     public Drawable mShiftNoneDrawable;
     public Drawable mShiftSingleDrawable;
-    public Drawable mSymbolViewDrawable;
-    public Drawable mSymbolEmojiDrawable;
-    public Drawable mSymbolKigouDrawable;
+    public Drawable mLangJaDrawable;
+    public Drawable mLangEnDrawable;
     //
     public Handler mRepeatHandler;
     public ImageView mImageView;
@@ -130,10 +126,8 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
         mShiftNoneDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_none, null);
         mShiftSingleDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_single, null);
         mShiftLockDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_lock, null);
-//        mSymbolViewDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_view, null);
-//        mSymbolEmojiDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_emoji, null);
-//        mSymbolKigouDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_symbol_kigou, null);
-//        mLanguageDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_language, null);
+        mLangJaDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_lang_ja, null);
+        mLangEnDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_lang_en, null);
 
         mLanguageJapaneseFlag = true;
         mShiftSingleFlag = false;
@@ -155,7 +149,7 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
 
         mLanguageKey = new SoftKey(SOFTKEY_ID_LANGUAGE);
         mLanguageKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
-        mLanguageKey.setDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_language, null));
+        mLanguageKey.setDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_lang_ja, null));
 
         mSymbolViewKey = new SoftKey(SOFTKEY_ID_SYMBOL_VIEW);
         mSymbolViewKey.setColor(mKeyForegroundColor, mFunctionKeyBackgroundColor);
@@ -202,9 +196,39 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
         }
     }
 
+    public char getKeyChar(int id) {
+        return '\0';
+    }
+
     public void processSoftKey(@NonNull SoftKey softKey) {
         int id = softKey.getId();
+        if (id >= 0) {
+            mKeyboardService.handleCharacter(getKeyChar(id));
+            mShiftSingleFlag = false;
+            return;
+        }
         switch (id) {
+            case SOFTKEY_ID_SHIFT:
+                if (mShiftLockFlag) {
+                    mShiftLockFlag = false;
+                    mShiftSingleFlag = false;
+                } else {
+                    if (mShiftSingleFlag) {
+                        mShiftLockFlag = true;
+                        mShiftSingleFlag = false;
+                    } else {
+                        mShiftSingleFlag = true;
+                    }
+                }
+                break;
+            case SOFTKEY_ID_LANGUAGE:
+                mLanguageJapaneseFlag = !mLanguageJapaneseFlag;
+                if (mLanguageJapaneseFlag) {
+                    mLanguageKey.setDrawable(mLangJaDrawable);
+                }else{
+                    mLanguageKey.setDrawable(mLangEnDrawable);
+                }
+                break;
             case SOFTKEY_ID_KEYBOARD_VIEW:
                 mKeyboardService.handleKeyboard();
                 break;

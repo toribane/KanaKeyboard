@@ -22,7 +22,7 @@ import java.util.HashMap;
 
 public class Converter {
 
-    private static final HashMap<Character, String> halfKatakanaMap = new HashMap<Character, String>() {
+    private static final HashMap<Character, String> halfKatakanaMap = new HashMap<>() {
         {
             put('あ', "ｱ");
             put('い', "ｲ");
@@ -119,7 +119,7 @@ public class Converter {
         }
     };
     // 全角濁点'゛'結合用 consonant
-    private static final HashMap<Character, Character> dakutenMap = new HashMap<Character, Character>() {
+    private static final HashMap<Character, Character> dakutenMap = new HashMap<>() {
         {
             put('う', 'ゔ');
 
@@ -176,7 +176,7 @@ public class Converter {
     };
 
     // 全角半濁点'゜'結合用
-    private static final HashMap<Character, Character> handakutenMap = new HashMap<Character, Character>() {
+    private static final HashMap<Character, Character> handakutenMap = new HashMap<>() {
         {
             put('は', 'ぱ');
             put('ひ', 'ぴ');

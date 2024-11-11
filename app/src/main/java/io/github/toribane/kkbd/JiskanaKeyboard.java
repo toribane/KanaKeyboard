@@ -21,7 +21,6 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.util.AttributeSet;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.ViewGroup;
 import android.widget.ImageView;
@@ -59,7 +58,9 @@ public class JiskanaKeyboard extends KeyboardLayout {
             'っ', '\0', '＜', '＞', '（', '）', '！', '？', '、', '。', '・', '～',
     };
 
-    private char getKeyChar(int id) {
+
+    @Override
+    public char getKeyChar(int id) {
         if (id >= 0) {
             if (mShiftSingleFlag || mShiftLockFlag) {
                 if (mLanguageJapaneseFlag) {
@@ -161,38 +162,6 @@ public class JiskanaKeyboard extends KeyboardLayout {
         drawKeyboard();
         invalidate();
         return true;
-    }
-
-    @Override
-    public void processSoftKey(@NonNull SoftKey softKey) {
-        int id = softKey.getId();
-        // SHIFTキー
-        if (id == SOFTKEY_ID_SHIFT) {
-            if (mShiftLockFlag) {
-                mShiftLockFlag = false;
-                mShiftSingleFlag = false;
-            } else {
-                if (mShiftSingleFlag) {
-                    mShiftLockFlag = true;
-                    mShiftSingleFlag = false;
-                } else {
-                    mShiftSingleFlag = true;
-                }
-            }
-            return;
-        }
-        // 言語キー
-        if (id == SOFTKEY_ID_LANGUAGE) {
-            mLanguageJapaneseFlag = !mLanguageJapaneseFlag;
-            return;
-        }
-        // 文字キー
-        if (id >= 0) {
-            mKeyboardService.handleCharacter(getKeyChar(id));
-            mShiftSingleFlag = false;
-            return;
-        }
-        super.processSoftKey(softKey);
     }
 
     private void drawKeyboard() {
