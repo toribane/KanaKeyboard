@@ -18,6 +18,7 @@ package io.github.toribane.kkbd;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.inputmethodservice.InputMethodService;
+import android.text.InputType;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.BackgroundColorSpan;
@@ -42,14 +43,15 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.Set;
 
-public class KeyboardService extends InputMethodService  implements SharedPreferences.OnSharedPreferenceChangeListener {
+public class KeyboardService extends InputMethodService implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     // キーボード
     private ViewGroup mKeyboardLayout;
     private View mCandidateView;
     private ViewGroup mCandidateLayout;
+    private KeyboardLayout mJiskanaKeyboard;
     // シンボル
-    private ViewGroup mSymbolKeyboard;
+    private KeyboardLayout mSymbolKeyboard;
     //
     private Dictionary mDictionary;
     //
@@ -60,6 +62,9 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
     //
     private boolean mConvertHalfKana;
     private boolean mConvertWideLatin;
+    // 入力モード、onStartInputView()で決まる
+    private boolean mInputJapanese; // 日本語入力モード
+    private boolean mInputPassword; // 入力フィールドはパスワード
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
@@ -73,6 +78,7 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
             mConvertWideLatin = sharedPreferences.getBoolean(key, false);
         }
     }
+
     @Override
     public void onCreate() {
         super.onCreate();
@@ -85,8 +91,8 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         FrameLayout layout = (FrameLayout) LayoutInflater.from(this).inflate(R.layout.input_layout, null);
 
         mKeyboardLayout = layout.findViewById(R.id.keyboard_layout);
-        mSymbolKeyboard = layout.findViewById(R.id.emoji_keyboard);
-
+        mSymbolKeyboard = layout.findViewById(R.id.symbol_keyboard);
+        mJiskanaKeyboard = layout.findViewById(R.id.jiskana_keyboard);
         mCandidateView = layout.findViewById(R.id.candidate_view);
         mCandidateLayout = layout.findViewById(R.id.candidate_layout);
 
@@ -100,6 +106,33 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
         sharedPreferences.registerOnSharedPreferenceChangeListener(this);
         mConvertHalfKana = sharedPreferences.getBoolean("convert_half_kana", false);
         mConvertWideLatin = sharedPreferences.getBoolean("convert_wide_latin", false);
+
+        mInputJapanese = true;
+        mInputPassword = false;
+        switch (editorInfo.inputType & InputType.TYPE_MASK_CLASS) {
+            case InputType.TYPE_CLASS_NUMBER:
+            case InputType.TYPE_CLASS_DATETIME:
+            case InputType.TYPE_CLASS_PHONE:
+                mInputJapanese = false;
+                break;
+            case InputType.TYPE_CLASS_TEXT:
+                switch (editorInfo.inputType & InputType.TYPE_MASK_VARIATION) {
+                    case InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS:
+                    case InputType.TYPE_TEXT_VARIATION_PASSWORD:
+//                    case InputType.TYPE_TEXT_VARIATION_URI:
+                    case InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD:
+                    case InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS:
+                    case InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD:
+                        mInputPassword = true;
+                        mInputJapanese = false;
+                        break;
+                    default:
+                        break;
+                }
+            default:
+                break;
+        }
+        mJiskanaKeyboard.setJapaneseInputMode(mInputJapanese);
 
         mKeyboardLayout.setVisibility(View.VISIBLE);
         mSymbolKeyboard.setVisibility(View.INVISIBLE);
@@ -161,6 +194,11 @@ public class KeyboardService extends InputMethodService  implements SharedPrefer
     }
 
     public void handleCharacter(char c) {
+        if (mInputPassword) {
+            String s = String.valueOf(c);
+            icCommitText(s);
+            return;
+        }
         if (mCandidateIndex >= 0) {
             // 候補選択中なら確定する
             commitCandidateText();

@@ -18,12 +18,14 @@ package io.github.toribane.kkbd;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.drawable.Drawable;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 
@@ -118,16 +120,17 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
         mRepeatDelay = Integer.parseInt(sharedPreferences.getString("key_repeat_delay", "50"));
         mRepeatHandler = new Handler(Looper.getMainLooper());
 
-        mBackgroundColor = getResources().getColor(R.color.background, null);
-        mCharacterKeyBackgroundColor = getResources().getColor(R.color.character_key_background, null);
-        mFunctionKeyBackgroundColor = getResources().getColor(R.color.function_key_background, null);
-        mKeyForegroundColor = getResources().getColor(R.color.key_foreground, null);
+        Resources res = getResources();
+        mBackgroundColor = res.getColor(R.color.background, null);
+        mCharacterKeyBackgroundColor = res.getColor(R.color.character_key_background, null);
+        mFunctionKeyBackgroundColor = res.getColor(R.color.function_key_background, null);
+        mKeyForegroundColor = res.getColor(R.color.key_foreground, null);
 
-        mShiftNoneDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_none, null);
-        mShiftSingleDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_single, null);
-        mShiftLockDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_shift_lock, null);
-        mLangJaDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_lang_ja, null);
-        mLangEnDrawable = ResourcesCompat.getDrawable(getResources(), R.drawable.ic_lang_en, null);
+        mShiftNoneDrawable = ResourcesCompat.getDrawable(res, R.drawable.ic_shift_none, null);
+        mShiftSingleDrawable = ResourcesCompat.getDrawable(res, R.drawable.ic_shift_single, null);
+        mShiftLockDrawable = ResourcesCompat.getDrawable(res, R.drawable.ic_shift_lock, null);
+        mLangJaDrawable = ResourcesCompat.getDrawable(res, R.drawable.ic_lang_ja, null);
+        mLangEnDrawable = ResourcesCompat.getDrawable(res, R.drawable.ic_lang_en, null);
 
         mLanguageJapaneseFlag = true;
         mShiftSingleFlag = false;
@@ -196,6 +199,15 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
         }
     }
 
+    public void setJapaneseInputMode(boolean mode) {
+        mLanguageJapaneseFlag = mode;
+        if (mLanguageJapaneseFlag) {
+            mLanguageKey.setDrawable(mLangJaDrawable);
+        } else {
+            mLanguageKey.setDrawable(mLangEnDrawable);
+        }
+    }
+
     public char getKeyChar(int id) {
         return '\0';
     }
@@ -225,7 +237,7 @@ public class KeyboardLayout extends LinearLayout implements SharedPreferences.On
                 mLanguageJapaneseFlag = !mLanguageJapaneseFlag;
                 if (mLanguageJapaneseFlag) {
                     mLanguageKey.setDrawable(mLangJaDrawable);
-                }else{
+                } else {
                     mLanguageKey.setDrawable(mLangEnDrawable);
                 }
                 break;

@@ -60,6 +60,13 @@ public class JiskanaKeyboard extends KeyboardLayout {
 
 
     @Override
+    public void setJapaneseInputMode(boolean mode) {
+        super.setJapaneseInputMode(mode);
+        drawKeyboard();
+        invalidate();
+    }
+
+    @Override
     public char getKeyChar(int id) {
         if (id >= 0) {
             if (mShiftSingleFlag || mShiftLockFlag) {
