@@ -395,14 +395,22 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
         String str = mInputText.toString();
         int len = str.length();
 
-        int nBest = 20;
+        int nBest = 30;
 
         Set<String> surfaces = new LinkedHashSet<>();// 追加順、重複なし
+        ArrayList<String> learningWords;
 
         // 学習辞書から完全一致するものをすべて追加
-        ArrayList<String> learningWords = mDictionary.findLearningWord(str);
+        learningWords = mDictionary.findLearningWord(str);
         if (learningWords != null) {
             surfaces.addAll(learningWords);
+        }
+        // 1文字で先頭一致だと多すぎる
+        if (str.length() > 1) {
+            learningWords = mDictionary.browseLearningWord(str);
+            if (learningWords != null) {
+                surfaces.addAll(learningWords);
+            }
         }
 
         //

@@ -233,4 +233,26 @@ public class Dictionary {
         }
         return list;
     }
+
+    public ArrayList<String> browseLearningWord(String key) {
+        Tuple tuple = new Tuple();
+        TupleBrowser browser;
+        ArrayList<String> list = new ArrayList<>();
+        try {
+            browser = mBTreeLearningDic.browse(key);
+            while (browser.getNext(tuple)) {
+                String tupleKey = (String) tuple.getKey();
+                if (!tupleKey.startsWith(key)) {
+                    break;
+                }
+                String value = (String) tuple.getValue();
+                if (value != null) {
+                    String[] words = value.split("\t");
+                    list.addAll(Arrays.asList(words));
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        return list;
+    }
 }

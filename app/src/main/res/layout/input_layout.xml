@@ -70,9 +70,4 @@
             android:layout_height="@dimen/keyboard_height" />
     </LinearLayout>
 
-    <io.github.toribane.kkbd.SymbolKeyboard
-        android:id="@+id/symbol_keyboard"
-        android:layout_width="match_parent"
-        android:layout_height="288dp"
-        android:visibility="invisible" />
 </FrameLayout>
