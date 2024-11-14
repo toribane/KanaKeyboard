@@ -17,14 +17,20 @@
 package io.github.toribane.kkbd;
 
 import android.app.Activity;
+
+import androidx.appcompat.app.AlertDialog;
+
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.DocumentsContract;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.Toast;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultLauncher;
@@ -49,6 +55,36 @@ public class LearningDictionaryTool extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             this::onImportActivityResult);
 
+    private void showToast(String str) {
+        Toast toast = Toast.makeText(this, str, Toast.LENGTH_SHORT);
+        toast.show();
+    }
+
+    AdapterView.OnItemClickListener itemClickListener = (parent, view, position, l) -> {
+        String item = (String) parent.getItemAtPosition(position);
+        String[] ss = item.split("\t", 2);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("読み:" + ss[0]);
+        builder.setMessage("「" + ss[1] + "」を削除しますか");
+        builder.setPositiveButton("はい", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int idx) {
+                showToast("削除しました");
+                mDictionary.deleteLearning(ss[0]);
+                mAdapter.clear();
+                mAdapter.addAll(exportDictionary());
+                mAdapter.notifyDataSetChanged();
+            }
+        });
+        builder.setNegativeButton("いいえ", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int idx) {
+                showToast("キャンセルしました");
+            }
+        });
+        builder.create();
+        builder.show();
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -61,6 +97,7 @@ public class LearningDictionaryTool extends AppCompatActivity {
         importButton.setOnClickListener(this::onClickImportDictionary);
 
         ListView listView = findViewById(R.id.list_view);
+        listView.setOnItemClickListener(itemClickListener);
         listView.setEmptyView(findViewById(R.id.empty_text));
 
         ArrayList<String> dataList = new ArrayList<>();

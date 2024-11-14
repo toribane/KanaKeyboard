@@ -255,4 +255,12 @@ public class Dictionary {
         }
         return list;
     }
+
+    public void deleteLearning(String key) {
+        try {
+            mBTreeLearningDic.remove(key);
+            mRecmanLearningDic.commit();
+        } catch (IOException ignored) {
+        }
+    }
 }
