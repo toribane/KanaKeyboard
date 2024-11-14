@@ -40,34 +40,9 @@
     </LinearLayout>
 
     <!-- シンボル -->
-    <LinearLayout
+    <io.github.toribane.kkbd.SymbolKeyboard
+        android:id="@+id/symbol_keyboard"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:id="@+id/symbol_layout"
-        android:visibility="invisible">
-
-        <!-- カテゴリー -->
-        <HorizontalScrollView
-            android:id="@+id/category_view"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/softkey_height"
-            android:fillViewport="true"
-            android:scrollbars="none"
-            tools:ignore="SpeakableTextPresentCheck">
-
-            <LinearLayout
-                android:id="@+id/category_layout"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:layout_gravity="center_vertical"
-                android:orientation="horizontal" />
-        </HorizontalScrollView>
-
-        <io.github.toribane.kkbd.SymbolKeyboard
-            android:id="@+id/symbol_keyboard"
-            android:layout_width="match_parent"
-            android:layout_height="@dimen/keyboard_height" />
-    </LinearLayout>
-
+        android:layout_height="288dp"
+        android:visibility="invisible" />
 </FrameLayout>
