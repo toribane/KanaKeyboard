@@ -4,7 +4,7 @@
 
 PCのJISかな配列のようにかな文字キーを配置したAndroid用のかな漢字変換IMEです。
 
-ビルド済みバイナリはこちら→[apkファイル](./KanaKeyboard.apk)
+ビルド済みバイナリはこちら→[apkファイル](https://github.com/toribane/KanaKeyboard/raw/refs/heads/master/KanaKeyboard.apk)
 
 
 ## ライセンス等
