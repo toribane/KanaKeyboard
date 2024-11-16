@@ -58,7 +58,6 @@ public class JiskanaKeyboard extends KeyboardLayout {
             'っ', '\0', '＜', '＞', '（', '）', '！', '？', '、', '。', '・', '～',
     };
 
-
     @Override
     public void setJapaneseInputMode(boolean mode) {
         super.setJapaneseInputMode(mode);

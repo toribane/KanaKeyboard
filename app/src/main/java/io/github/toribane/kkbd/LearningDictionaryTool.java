@@ -182,4 +182,5 @@ public class LearningDictionaryTool extends AppCompatActivity {
             }
         }
     }
+
 }

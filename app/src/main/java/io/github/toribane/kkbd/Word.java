@@ -17,11 +17,7 @@ package io.github.toribane.kkbd;
 
 import androidx.annotation.NonNull;
 
-import java.io.Serializable;
-
-public class Word implements Serializable, Comparable<Word> {
-
-    private static final long serialVersionUID = 1L;
+public class Word implements Comparable<Word> {
 
     public short id;
     public short cost;
@@ -33,31 +29,12 @@ public class Word implements Serializable, Comparable<Word> {
         return id + "," + cost + "," + surface;
     }
 
-    public short getId() {
-        return id;
-    }
-
-    public int getCost() {
-        return cost;
-    }
-
-    public String getSurface() {
-        return surface;
-    }
-
     public Word(String s) {
         String[] ss = s.split(",", 3);
         this.id = Short.parseShort(ss[0]);
         this.cost = Short.parseShort(ss[1]);
         this.surface = ss[2];
     }
-
-    public Word(String surface, int id, int cost) {
-        this.surface = surface;
-        this.id = (short) id;
-        this.cost = (short) cost;
-    }
-
 
     @Override
     public int compareTo(Word word) {
