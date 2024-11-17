@@ -36,7 +36,6 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.PriorityQueue;
-import java.util.Set;
 
 import jdbm.RecordManager;
 import jdbm.RecordManagerFactory;
@@ -294,7 +293,6 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
 
     public List<List<Node>> buildGraph(String str, int splitPos) {
         int len = str.length();
-        // 参考：「日本語入力を支える技術」4.2 グラフの作成
         List<List<Node>> graph = new ArrayList<>();
         for (int i = 0; i <= (len + 1); i++) {
             graph.add(i, new ArrayList<>());
@@ -321,68 +319,61 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
                 }
             }
         }
-        // 参考：「日本語入力を支える技術」5.10 変換誤りへの対処、ただしスコアではなくコストで構築
+        // 前向きDP
+        // 参考：「形態要素解析の理論と実装」図5.6 ビタビアルゴリズムによるビタビ系列の探索
         for (int endPos = 1; endPos <= len; endPos++) {
             // endPos文字目で終わるノードのリスト
             List<Node> nodes = graph.get(endPos);
             for (Node node : nodes) {
-                int cost = Integer.MAX_VALUE;  // コストの低いものを優先する
-                Node bestPrev = null;
-                // このノードの開始位置の一つ前が終わりのノード
+                node.costFromStart = Integer.MAX_VALUE;  // このノードまでの最小コスト
+                node.prev = null;   // このノードまでのコストが最小になる前方のノード
+                // このノードの開始位置の一つ前が終わりのすべてのノードに対して
                 List<Node> prevNodes = graph.get(node.startPos - 1);
                 for (Node prevNode : prevNodes) {
+                    // 前方のノードと注目しているノード間の連接コスト
                     int edgeCost = getEdgeCost(prevNode, node);
-                    int tmpCost = prevNode.costFromStart + edgeCost + node.word.cost;
-                    if (tmpCost < cost) {
-                        cost = tmpCost; // コストが低い
-                        bestPrev = prevNode;
+                    // 先頭から前方のノードまでのコストと連接コストとこのノードの語句のコストの和
+                    int cost = prevNode.costFromStart + edgeCost + node.word.cost;
+                    if (cost < node.costFromStart) {
+                        // コストの低いものでこのノードを更新
+                        node.costFromStart = cost;
+                        node.prev = prevNode;
                     }
                 }
-                node.prev = bestPrev;
-                node.costFromStart = cost;
             }
         }
         return graph;
     }
 
-    public Candidate[] buildConversionCandidate(CharSequence reading, int mConvertLength) {
-        String str = reading.toString();
-        int len = str.length();
+    public Candidate[] buildConversionCandidate(CharSequence cs, int mConvertLength) {
+        String reading = cs.toString();
+        int len = reading.length();
 
         int nBest = 30;
 
-        Set<String> surfaces = new LinkedHashSet<>();// 追加順、重複なし
-        ArrayList<String> learningWords;
+        // 重複チェック用、読みと表記をTABでつなげた文字列
+        LinkedHashSet<String> pairs = new LinkedHashSet<>();
+        ArrayList<String> surfaces;
 
         // 学習辞書から完全一致するものをすべて追加
-        learningWords = findLearningWord(str);
-        if (learningWords != null) {
-            surfaces.addAll(learningWords);
-        }
-        // 1文字で先頭一致だと多すぎる
-        if (str.length() > 1) {
-            learningWords = browseLearningWord(str);
-            if (learningWords != null) {
-                surfaces.addAll(learningWords);
+        surfaces = findLearningWord(reading);
+        if (surfaces != null) {
+            for (String surface : surfaces) {
+                pairs.add(reading + "\t" + surface);
             }
         }
+        // 先頭一致(2文字以上)
+//        if (reading.length() > 1) {
+//            surfaces = browseLearningWord(reading);
+//            if (surfaces != null) {
+//                for (String surface : surfaces) {
+//                    pairs.add(reading + "\t" + surface);
+//                }
+//            }
+//        }
 
-        //
-        if (mConvertHalfKana) {
-            String s = Converter.toHalfKatakana(str);
-            if (!s.equals(str)) {
-                surfaces.add(s);
-            }
-        }
-        if (mConvertWideLatin) {
-            String s = Converter.toWideLatin(str);
-            if (!s.equals(str)) {
-                surfaces.add(s);
-            }
-        }
-
-        // 前半はグラフ作成
-        List<List<Node>> graph = buildGraph(str, mConvertLength);
+        // 前半は前向きDPでグラフ作成
+        List<List<Node>> graph = buildGraph(reading, mConvertLength);
 
         // 後半は優先度キューを使ってたどるノードを選んでいく
         PriorityQueue<Node> pq = new PriorityQueue<>();
@@ -391,44 +382,110 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         pq.add(goalNode);
         // ここからループ
         while (!pq.isEmpty()) {
+            // 優先度付きキューから最もコストの低いノードを取り出す。
             Node node = pq.poll();
             if (node.startPos == 0) {
-                // 取り出したノードがスタートノードであった場合、そのノードを結果に追加する
+                // 取り出したノードがスタートノードに到達したらそのノードを結果に追加する
                 // 分割や品詞が違っても表記が同じならばカウントしない
-                surfaces.add(buildSurface(node));
-                if (surfaces.size() >= nBest) {
+                String surface = buildSurface(node);
+                pairs.add(reading + "\t" + surface);
+                if (pairs.size() >= nBest) {
                     break; //
                 }
             } else {
                 // スタートノードではなかった場合、そのノードに隣接するスタート側のノードのリストを取り出す
                 List<Node> prevNodes = graph.get(node.startPos - 1);
+                // 取り出した各隣接ノードに対して
                 for (Node prevNode : prevNodes) {
+                    // 隣接ノードのゴールまでのコストを注目しているノードのコストとノード間のコストと隣接ノードのコストの和にする
                     int edgeCost = getEdgeCost(prevNode, node);
                     prevNode.costToGoal = node.costToGoal + edgeCost + node.word.cost;
                     prevNode.next = node;
-                    // 優先度キューに追加
                     Node queueNode = new Node(prevNode);
-                    queueNode.prio = prevNode.costFromStart + prevNode.costToGoal;
+                    queueNode.prio = queueNode.costToGoal + queueNode.costFromStart;
+                    // 優先度キューに追加
                     pq.add(queueNode);
                 }
             }
         }
 
-        Set<Candidate> candidates = new LinkedHashSet<>();// 追加順、重複なし
-
-        for (String surface : surfaces) {
-            candidates.add(new Candidate(str, surface));
+        if (mConvertHalfKana) {
+            String s = Converter.toHalfKatakana(reading);
+            if (!s.equals(reading)) {
+                pairs.add(reading + "\t" + s);
+            }
         }
-        //
+        if (mConvertWideLatin) {
+            String s = Converter.toWideLatin(reading);
+            if (!s.equals(reading)) {
+                pairs.add(reading + "\t" + s);
+            }
+        }
+
+        // Candidate[]にして返す
+        ArrayList<Candidate> candidates = new ArrayList<>();
+        for (String pair : pairs) {
+            String[] ss = pair.split("\\t");
+            candidates.add(new Candidate(ss[0], ss[1]));
+        }
         return candidates.toArray(new Candidate[0]);
     }
 
     private String buildSurface(Node node) {
         StringBuilder sb = new StringBuilder();
+        // BOSとEOSの間のみ
         for (node = node.next; node.next != null; node = node.next) {
             sb.append(node.word.surface);
         }
         return sb.toString();
     }
 
+    public class Word {
+        public short id;
+        public short cost;
+        public String surface;
+
+        public Word(String s) {
+            String[] ss = s.split(",", 3);
+            this.id = Short.parseShort(ss[0]);
+            this.cost = Short.parseShort(ss[1]);
+            this.surface = ss[2];
+        }
+    }
+
+    public class Node implements Comparable<Node> {
+        public int startPos;   // 開始文字位置
+        public Word word;
+        // 前向きDP
+        public int costFromStart; // スタートからこのノードまでの最小コスト
+        public Node prev;
+        // 後ろ向き
+        public int costToGoal; // このノードからゴールまでのコスト
+        public Node next;
+        // 優先度付きキューへの登録に使用する優先度
+        public int prio;
+
+        public Node(Node node) {
+            this.startPos = node.startPos;
+            this.word = node.word;
+            // 前向き
+            this.costFromStart = node.costFromStart;
+            this.next = node.next;
+            // 後ろ向き
+            this.costToGoal = node.costToGoal;
+            this.prev = node.prev;
+            // 優先度付きキュー
+            this.prio = node.prio;
+        }
+
+        public Node(int startPos, Word word) {
+            this.startPos = startPos;
+            this.word = word;
+        }
+
+        @Override
+        public int compareTo(Node node) {
+            return this.prio - node.prio;
+        }
+    }
 }
