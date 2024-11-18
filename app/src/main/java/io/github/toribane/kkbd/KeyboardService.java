@@ -37,12 +37,6 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.preference.PreferenceManager;
 
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.PriorityQueue;
-import java.util.Set;
-
 public class KeyboardService extends InputMethodService implements SharedPreferences.OnSharedPreferenceChangeListener {
 
     // キーボード
@@ -62,13 +56,6 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
     // 入力モード、onStartInputView()で決まる
     private boolean mInputJapanese; // 日本語入力モード
     private boolean mInputPassword; // 入力フィールドはパスワード
-
-    @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
-        if (key == null) {
-            return;
-        }
-    }
 
     @Override
     public void onCreate() {
@@ -91,12 +78,39 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
     }
 
     @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
+        if (key == null) {
+            return;
+        }
+        switch (key) {
+            case "input_start_lang":
+                switch (sharedPreferences.getString(key, "jp")) {
+                    case "en":
+                        mInputJapanese = false;
+                        break;
+                    case "jp":
+                    default:
+                        mInputJapanese = true;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    @Override
     public void onStartInputView(EditorInfo editorInfo, boolean restarting) {
         super.onStartInputView(editorInfo, restarting);
         SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
         sharedPreferences.registerOnSharedPreferenceChangeListener(this);
-
-        mInputJapanese = true;
+        switch (sharedPreferences.getString("input_start_lang", "jp")) {
+            case "en":
+                mInputJapanese = false;
+                break;
+            case "jp":
+            default:
+                mInputJapanese = true;
+        }
         mInputPassword = false;
         switch (editorInfo.inputType & InputType.TYPE_MASK_CLASS) {
             case InputType.TYPE_CLASS_NUMBER:
@@ -126,10 +140,15 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
         mKeyboardLayout.setVisibility(View.VISIBLE);
         mSymbolKeyboard.setVisibility(View.INVISIBLE);
 
+        resetInput();
+    }
+
+    private void resetInput() {
         mInputText.setLength(0);
         mConvertLength = 0;
         mCandidateLayout.removeAllViewsInLayout();
         mCandidateIndex = -1;
+        icCommitText("");
     }
 
     private void icSetComposingText() {
@@ -155,22 +174,14 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
     // 入力中テキストをコミット
     private void commitInputText() {
         icCommitText(mInputText);
-        mInputText.setLength(0);
-        mConvertLength = 0;
-        mCandidateLayout.removeAllViewsInLayout();
-        mCandidateIndex = -1;
+        resetInput();
     }
 
     private void commitCandidateText() {
         Candidate candidate = mCandidates[mCandidateIndex];
-        mDictionary.addLearning(candidate.key, candidate.value);
-
-        mCandidateLayout.removeAllViewsInLayout();
-        mCandidateIndex = -1;
-
-        icCommitText(candidate.value);
-        mInputText.setLength(0);
-        mConvertLength = 0;
+        mDictionary.addLearning(candidate);
+        icCommitText(candidate.surface);
+        resetInput();
     }
 
     public void handleString(String s) {
@@ -229,10 +240,14 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
         }
         // 候補未選択→入力テキストの最後の文字を削除して候補を作り直す
         mInputText.deleteCharAt(mInputText.length() - 1);
-        mConvertLength = mInputText.length();
-        icSetComposingText();
-        mCandidates = mDictionary.buildConversionCandidate(mInputText, mConvertLength);
-        setCandidateText();
+        if (mInputText.length() == 0) {
+            resetInput();
+        } else {
+            mConvertLength = mInputText.length();
+            icSetComposingText();
+            mCandidates = mDictionary.buildConversionCandidate(mInputText, mConvertLength);
+            setCandidateText();
+        }
     }
 
     public void handleEnter() {
@@ -247,9 +262,7 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
             // 候補未選択→入力テキストをそのままコミット
             commitInputText();
             icCommitText(mInputText);
-            mInputText.setLength(0);
-            mCandidateLayout.removeAllViewsInLayout();
-            mCandidateIndex = -1;
+            resetInput();
         }
     }
 
@@ -348,7 +361,7 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
         Context context = new ContextThemeWrapper(this, style);
         for (Candidate candidate : mCandidates) {
             TextView view = new TextView(context, null, style);
-            view.setText(candidate.value);    // 表示用テキスト
+            view.setText(candidate.surface);    // 表示用テキスト
             view.setOnClickListener(this::onClickCandidateTextListener);
             mCandidateLayout.addView(view);
         }

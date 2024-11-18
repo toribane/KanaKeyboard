@@ -32,7 +32,6 @@ import java.nio.ShortBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.PriorityQueue;
@@ -98,7 +97,7 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
     }
 
     // ２つのノード間のエッジのコストを返す
-    public int getEdgeCost(Node left, Node right) {
+    private int getEdgeCost(Node left, Node right) {
         return mConnectionTable[left.word.id * mConnectionDim + right.word.id];
     }
 
@@ -191,27 +190,29 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         sb.get(mConnectionTable);
     }
 
-    public void addLearning(String keyword, String word) {
+    public void addLearning(Candidate candidate) {
+        String reading = candidate.reading;
+        String surface = candidate.surface;
         if (mRecmanLearningDic == null || mBTreeLearningDic == null) {
             return;
         }
-        if (keyword.isEmpty() || word.isEmpty()) {
+        if (reading.isEmpty() || surface.isEmpty()) {
             return;
         }
         try {
-            String value = (String) mBTreeLearningDic.find(keyword);
+            String value = (String) mBTreeLearningDic.find(reading);
             if (value == null) {
-                mBTreeLearningDic.insert(keyword, word, true);
+                mBTreeLearningDic.insert(reading, surface, true);
             } else {
-                StringBuilder sb = new StringBuilder(word);
+                StringBuilder sb = new StringBuilder(surface);
                 String[] ss = value.split("\t");
                 for (String s : ss) {
-                    if (s.equals(word)) {
+                    if (s.equals(surface)) {
                         continue;
                     }
                     sb.append("\t").append(s);
                 }
-                mBTreeLearningDic.insert(keyword, sb.toString(), true);
+                mBTreeLearningDic.insert(reading, sb.toString(), true);
             }
             mRecmanLearningDic.commit();
         } catch (IOException ignored) {
@@ -226,7 +227,7 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             }
             String key = ss[0];
             for (int i = 1; i < ss.length; i++) {
-                addLearning(key, ss[i]);
+                addLearning(new Candidate(key, ss[i]));
             }
         }
     }
@@ -239,41 +240,6 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             TupleBrowser browser = mBTreeLearningDic.browse();
             while (browser.getNext(tuple)) {
                 list.add(tuple.getKey() + "\t" + tuple.getValue());
-            }
-        } catch (IOException ignored) {
-        }
-        return list;
-    }
-
-    public ArrayList<String> findLearningWord(String key) {
-        ArrayList<String> list = new ArrayList<>();
-        try {
-            String value = (String) mBTreeLearningDic.find(key);
-            if (value != null) {
-                String[] words = value.split("\t");
-                list.addAll(Arrays.asList(words));
-            }
-        } catch (IOException ignored) {
-        }
-        return list;
-    }
-
-    public ArrayList<String> browseLearningWord(String key) {
-        Tuple tuple = new Tuple();
-        TupleBrowser browser;
-        ArrayList<String> list = new ArrayList<>();
-        try {
-            browser = mBTreeLearningDic.browse(key);
-            while (browser.getNext(tuple)) {
-                String tupleKey = (String) tuple.getKey();
-                if (!tupleKey.startsWith(key)) {
-                    break;
-                }
-                String value = (String) tuple.getValue();
-                if (value != null) {
-                    String[] words = value.split("\t");
-                    list.addAll(Arrays.asList(words));
-                }
             }
         } catch (IOException ignored) {
         }
@@ -353,24 +319,39 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
 
         // 重複チェック用、読みと表記をTABでつなげた文字列
         LinkedHashSet<String> pairs = new LinkedHashSet<>();
-        ArrayList<String> surfaces;
 
         // 学習辞書から完全一致するものをすべて追加
-        surfaces = findLearningWord(reading);
-        if (surfaces != null) {
-            for (String surface : surfaces) {
-                pairs.add(reading + "\t" + surface);
+        try {
+            String value = (String) mBTreeLearningDic.find(reading);
+            if (value != null) {
+                for (String surface : value.split("\t")) {
+                    pairs.add(reading + "\t" + surface);
+                }
+            }
+        } catch (IOException ignored) {
+        }
+
+        // 学習辞書から先頭一致(2文字以上)
+        if (reading.length() > 1) {
+            try {
+                Tuple tuple = new Tuple();
+                TupleBrowser browser = mBTreeLearningDic.browse(reading);
+                while (browser.getNext(tuple)) {
+                    String key = (String) tuple.getKey();
+                    if (!key.startsWith(reading)) {
+                        break;
+                    }
+                    String value = (String) tuple.getValue();
+                    if (value != null) {
+                        for (String surface : value.split("\t")) {
+                            // ここではreadingではなくkeyを使う
+                            pairs.add(key + "\t" + surface);
+                        }
+                    }
+                }
+            } catch (IOException ignored) {
             }
         }
-        // 先頭一致(2文字以上)
-//        if (reading.length() > 1) {
-//            surfaces = browseLearningWord(reading);
-//            if (surfaces != null) {
-//                for (String surface : surfaces) {
-//                    pairs.add(reading + "\t" + surface);
-//                }
-//            }
-//        }
 
         // 前半は前向きDPでグラフ作成
         List<List<Node>> graph = buildGraph(reading, mConvertLength);

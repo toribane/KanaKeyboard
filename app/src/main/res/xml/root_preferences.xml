@@ -1,6 +1,20 @@
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <PreferenceCategory
+        android:title="入力設定"
+        app:iconSpaceReserved="false">
+        <ListPreference
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:defaultValue="jp"
+            android:entries="@array/input_start_mode_entries"
+            android:entryValues="@array/input_start_mode_values"
+            android:key="input_start_lang"
+            android:title="開始時の入力言語"
+            app:iconSpaceReserved="false"
+            app:useSimpleSummaryProvider="true" />
+    </PreferenceCategory>
+    <PreferenceCategory
         android:title="キーボード設定"
         app:iconSpaceReserved="false">
         <ListPreference

@@ -19,17 +19,17 @@ package io.github.toribane.kkbd;
 import androidx.annotation.NonNull;
 
 public class Candidate {
-    public String key;
-    public String value;
+    public String reading;
+    public String surface;
 
-    public Candidate(String key, String value) {
-        this.key = key;
-        this.value = value;
+    public Candidate(String reading, String surface) {
+        this.reading = reading;
+        this.surface = surface;
     }
 
     @NonNull
     @Override
     public String toString() {
-        return key + ' ' + value;
+        return reading + ' ' + surface;
     }
 }

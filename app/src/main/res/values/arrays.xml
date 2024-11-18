@@ -1,4 +1,12 @@
 <resources>
+    <string-array name="input_start_mode_entries">
+        <item>日本語</item>
+        <item>英語</item>
+    </string-array>
+    <string-array name="input_start_mode_values">
+        <item>jp</item>
+        <item>en</item>
+    </string-array>
     <string-array name="key_repeat_timeout_entries">
         <item>800 ms</item>
         <item>700 ms</item>
