@@ -125,6 +125,12 @@ public class JiskanaKeyboard extends KeyboardLayout {
             }
         }
         if (currentKey == null) {
+            mRepeatKey = null;
+            if (mLastKey != null) {
+                mLastKey.setPressed(false);
+            }
+            drawKeyboard();
+            invalidate();
             return true;
         }
 
