@@ -116,7 +116,7 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             return null;
         }
         ArrayList<Word> list = new ArrayList<>();
-        for (String s : value.split("\\t")) {
+        for (String s : value.split("\t")) {
             list.add(new Word(s));
         }
         return list;
@@ -406,7 +406,7 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         // Candidate[]にして返す
         ArrayList<Candidate> candidates = new ArrayList<>();
         for (String pair : pairs) {
-            String[] ss = pair.split("\\t");
+            String[] ss = pair.split("\t");
             candidates.add(new Candidate(ss[0], ss[1]));
         }
         return candidates.toArray(new Candidate[0]);
