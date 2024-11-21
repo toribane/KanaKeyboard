@@ -21,10 +21,17 @@ import androidx.annotation.NonNull;
 public class Candidate {
     public String reading;
     public String surface;
+    public Node node;
 
     public Candidate(String reading, String surface) {
         this.reading = reading;
         this.surface = surface;
+    }
+
+    public Candidate(String reading, Node node) {
+        this.reading = reading;
+        this.surface = node.getSurface();
+        this.node = node;
     }
 
     @NonNull
