@@ -181,7 +181,9 @@ public class KeyboardService extends InputMethodService implements SharedPrefere
         Candidate candidate = mCandidates[mCandidateIndex];
         mDictionary.addLearning(candidate);
         icCommitText(candidate.surface);
+        mCandidates = mDictionary.buildPredictionCandidate(candidate);
         resetInput();
+        setCandidateText();
     }
 
     public void handleString(String s) {

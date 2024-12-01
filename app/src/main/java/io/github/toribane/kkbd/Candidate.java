@@ -16,27 +16,43 @@
 
 package io.github.toribane.kkbd;
 
-import androidx.annotation.NonNull;
+import java.util.ArrayList;
+import java.util.Objects;
 
 public class Candidate {
     public String reading;
     public String surface;
-    public Node node;
+    public Word[] words;
 
     public Candidate(String reading, String surface) {
         this.reading = reading;
         this.surface = surface;
     }
 
-    public Candidate(String reading, Node node) {
-        this.reading = reading;
-        this.surface = node.getSurface();
-        this.node = node;
+    public Candidate(Word word) {
+        this.reading = word.reading;
+        this.surface = word.surface;
+        this.words = new Word[1];
+        this.words[0] = word;
     }
 
-    @NonNull
-    @Override
-    public String toString() {
-        return reading + ' ' + surface;
+    public Candidate(String reading, String surface, ArrayList<Word> words) {
+        this.reading = reading;
+        this.surface = surface;
+        this.words = words.toArray(new Word[0]);
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Candidate candidate = (Candidate) o;
+        return Objects.equals(reading, candidate.reading) && Objects.equals(surface, candidate.surface);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(reading, surface);
+    }
+
 }

@@ -32,10 +32,9 @@ import java.nio.ShortBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
 
@@ -51,6 +50,7 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
     private static final String BTREE_NAME = "btree_dic";
     private static final String SYSTEM_DIC_NAME = "system_dic";
     private static final String LEARNING_DIC_NAME = "learning_dic";
+    private static final String PREDICTION_DIC_NAME = "prediction_dic";
     //
     private final String mFilesDirPath;
     //
@@ -58,6 +58,8 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
     private BTree mBTreeSystemDic;
     private RecordManager mRecmanLearningDic;
     private BTree mBTreeLearningDic;
+    private RecordManager mRecmanPredictionDic;
+    private BTree mBTreePredictionDic;
     //
     private short mConnectionDim;
     private short[] mConnectionTable;
@@ -96,6 +98,8 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             mBTreeSystemDic = null;
             mRecmanLearningDic = null;
             mBTreeLearningDic = null;
+            mRecmanPredictionDic = null;
+            mBTreePredictionDic = null;
         }
     }
 
@@ -113,6 +117,16 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             mRecmanLearningDic.commit();
         } else {
             mBTreeLearningDic = BTree.load(mRecmanLearningDic, recid);
+        }
+        // 予測辞書
+        mRecmanPredictionDic = RecordManagerFactory.createRecordManager(mFilesDirPath + PREDICTION_DIC_NAME);
+        recid = mRecmanPredictionDic.getNamedObject(BTREE_NAME);
+        if (recid == 0) {
+            mBTreePredictionDic = BTree.createInstance(mRecmanPredictionDic, new StringComparator());
+            mRecmanPredictionDic.setNamedObject(BTREE_NAME, mBTreePredictionDic.getRecid());
+            mRecmanPredictionDic.commit();
+        } else {
+            mBTreePredictionDic = BTree.load(mRecmanPredictionDic, recid);
         }
     }
 
@@ -168,131 +182,6 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         return mConnectionTable[leftNode.word.rid * mConnectionDim + rightNode.word.lid];
     }
 
-    // 辞書を指定して語句を探す
-    private ArrayList<Word> findDictionaryWords(String reading, BTree btree) {
-        ArrayList<Word> words = new ArrayList<>();
-        try {
-            String value = (String) btree.find(reading);
-            if (value != null) {
-                for (String s : value.split("\t")) {
-                    words.add(new Word(s));
-                }
-            }
-        } catch (IOException ignored) {
-        }
-        return words;
-    }
-
-    // 学習辞書から語句を探す
-    private ArrayList<Word> findLearningWords(String reading) {
-        return findDictionaryWords(reading, mBTreeLearningDic);
-    }
-
-    // すべての辞書から語句を探す
-    private ArrayList<Word> findWords(String reading) {
-        ArrayList<Word> list = new ArrayList<>();
-        Map<String, String> map = new HashMap<>();
-        StringBuilder sb = new StringBuilder();
-        // 学習辞書
-        try {
-            String value = (String) mBTreeLearningDic.find(reading);
-            if (value != null) {
-                sb.append(value);
-            }
-        } catch (IOException ignored) {
-        }
-        // システム辞書
-        try {
-            String value = (String) mBTreeSystemDic.find(reading);
-            if (value != null) {
-                sb.append("\t").append(value);
-            }
-        } catch (IOException ignored) {
-        }
-        // value="cost", key="lid,rid,surface"
-        for (String s : sb.toString().split("\t")) {
-            String[] ss = s.split(",", 2);
-            if (ss.length == 2) {
-                map.putIfAbsent(ss[1], ss[0]); // 学習辞書でcost調整済みならば上書きしない
-            }
-        }
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            list.add(new Word(entry.getValue() + "," + entry.getKey()));
-        }
-        return list;
-    }
-
-    private void addLearningWord(String reading, Word word) {
-        ArrayList<Word> list = new ArrayList<>();
-        Map<String, String> map = new HashMap<>();
-        // 先頭に今回の語句を入れておく
-        StringBuilder sb = new StringBuilder(word.toString());
-        // 学習辞書に
-        try {
-            String value = (String) mBTreeLearningDic.find(reading);
-            if (value != null) {
-                sb.append("\t").append(value);
-            }
-        } catch (IOException ignored) {
-        }
-        // value="cost", key="lid,rid,surface"
-        for (String s : sb.toString().split("\t")) {
-            String[] ss = s.split(",", 2);
-            if (ss.length == 2) {
-                map.putIfAbsent(ss[1], ss[0]);
-            }
-        }
-        sb = new StringBuilder();
-        for (Map.Entry<String, String> entry : map.entrySet()) {
-            if (sb.length() != 0) {
-                sb.append("\t");
-            }
-            sb.append(entry.getValue() + "," + entry.getKey());
-        }
-        try {
-            mBTreeLearningDic.insert(reading, sb.toString(), true);
-            mRecmanLearningDic.commit();
-        } catch (IOException ignored) {
-        }
-    }
-
-    // Wordを学習辞書に登録する
-    private void addLearningNode(Node node) {
-        String reading = node.reading;
-        // 同じ読みとIDの単語リストの中で最もコストの低いものを探す
-        short bestCost = node.word.cost;
-        Word bestWord = node.word;
-        // 再学習のため学習辞書も含める
-        for (Word word : findWords(reading)) {
-            if (word.lid == node.word.lid && word.rid == node.word.rid) {
-                if (bestCost > word.cost) {
-                    bestCost = word.cost;
-                    bestWord = word;
-                }
-            }
-        }
-        if (node.word.cost == bestWord.cost && node.word.surface.equals(bestWord.surface)) {
-            // 最もコストの低いものが選択されても学習辞書に登録する、ただしコスト0は除く(助詞等)
-            if (bestCost != 0) {
-                addLearningWord(reading, bestWord);
-            }
-        } else {
-            // 今回選択された語句のコストと最もコストの低い語句のコストを入れ替えたものを学習辞書に登録する
-            addLearningWord(reading, new Word(node.word.cost, bestWord.lid, bestWord.rid, bestWord.surface));
-            addLearningWord(reading, new Word(bestWord.cost, node.word.lid, node.word.rid, node.word.surface));
-        }
-    }
-
-    // Candidate内のNodeから学習する
-    public void addLearning(Candidate candidate) {
-        if (candidate.node == null) {
-            return;
-        }
-        for (Node node = candidate.node.next; node.next != null; node = node.next) {
-            addLearningNode(node);
-        }
-    }
-
     public void importLearningDictionary(ArrayList<String> entries) {
         for (String entry : entries) {
             String[] ss = entry.split("\t");
@@ -301,16 +190,16 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             }
             String key = ss[0];
             for (int i = 1; i < ss.length; i++) {
-                addLearningWord(key, new Word(ss[i]));
+                addLearningWord(new Word(key, ss[i]));
             }
         }
     }
 
     public ArrayList<String> exportLearningDictionary() {
         ArrayList<String> list = new ArrayList<>();
-        Tuple tuple = new Tuple();
         try {
             mRecmanLearningDic.commit();
+            Tuple tuple = new Tuple();
             TupleBrowser browser = mBTreeLearningDic.browse();
             while (browser.getNext(tuple)) {
                 list.add(tuple.getKey() + "\t" + tuple.getValue());
@@ -328,18 +217,152 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         }
     }
 
+    // 学習辞書とシステム辞書から語句を探す
+    private Set<Word> findWords(String key) {
+        Set<Word> set = new HashSet<>();
+        // 学習辞書
+        try {
+            String values = (String) mBTreeLearningDic.find(key);
+            if (values != null) {
+                for (String value : values.split("\t")) {
+                    set.add(new Word(key, value));
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        // システム辞書
+        try {
+            String values = (String) mBTreeSystemDic.find(key);
+            if (values != null) {
+                for (String value : values.split("\t")) {
+                    set.add(new Word(key, value));
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        return set;
+    }
+
+    // 学習辞書に語句を追加する
+    private void addLearningWord(Word word) {
+        try {
+            Set<Word> set = new HashSet<>();
+            set.add(word);
+            String values = (String) mBTreeLearningDic.find(word.reading);
+            if (values != null) {
+                for (String value : values.split("\t")) {
+                    set.add(new Word(word.reading, value));
+                }
+            }
+            StringBuilder sb = new StringBuilder();
+            for (Word w : set) {
+                if (sb.length() != 0) {
+                    sb.append("\t");
+                }
+                sb.append(w.getValue());
+            }
+            mBTreeLearningDic.insert(word.reading, sb.toString(), true);
+            mRecmanLearningDic.commit();
+        } catch (IOException ignored) {
+        }
+    }
+
+    // 選択された語句のコストを低くして次回の候補作成で先に現れるようにする
+    private void updateWordCost(Word selectWord) {
+        Word bestWord = selectWord;
+        for (Word word : findWords(selectWord.reading)) {
+            if (word.lid == selectWord.lid && word.rid == selectWord.rid) {
+                if (word.cost < bestWord.cost) {
+                    bestWord = word;
+                }
+            }
+        }
+        if (selectWord.cost != bestWord.cost) {
+            // コストを入れ替えて学習辞書に登録
+            short cost = selectWord.cost;
+            selectWord.cost = bestWord.cost;
+            bestWord.cost = cost;
+            addLearningWord(bestWord);
+        }
+        addLearningWord(selectWord);
+    }
+
+    // 予測辞書
+    private void addPredictionWord(Word currWord, Word nextWord) {
+        // 読みに','を含むものは現行の辞書では対応できないが一文字の','だけなので問題ない
+        if (currWord.reading.contains(",") || nextWord.reading.contains(",")) {
+            return;
+        }
+        try {
+            Set<Word> set = new LinkedHashSet<>();  // 追加順を保持
+            set.add(nextWord);
+            // keyにはcostを含めない
+            String key = currWord.reading + "," + currWord.lid + "," + currWord.rid + "," + currWord.surface;
+            String values = (String) mBTreePredictionDic.find(key);
+            if (values != null) {
+                for (String value : values.split("\t")) {
+                    // reading,cost,lid,rid,surface
+                    String[] ss = value.split(",", 2);
+                    set.add(new Word(ss[0], ss[1]));
+                }
+            }
+            StringBuilder sb = new StringBuilder();
+            for (Word w : set) {
+                if (sb.length() != 0) {
+                    sb.append("\t");
+                }
+                sb.append(w.toString());
+            }
+            mBTreePredictionDic.insert(key, sb.toString(), true);
+            mRecmanPredictionDic.commit();
+        } catch (IOException ignored) {
+        }
+    }
+
+    // Candidateから学習する
+    public void addLearning(Candidate candidate) {
+        if (candidate.words == null) {
+            return;
+        }
+        for (Word word : candidate.words) {
+            // 語句のコストを調整
+            updateWordCost(word);
+        }
+        // 予測辞書に登録
+        for (int i = 0; i < candidate.words.length - 1; i++) {
+            addPredictionWord(candidate.words[i], candidate.words[i + 1]);
+        }
+    }
+
+    public Candidate[] buildPredictionCandidate(Candidate candidate) {
+        Set<Candidate> set = new LinkedHashSet<>(); // 追加順保持
+        if (candidate.words == null) {
+            return set.toArray(new Candidate[0]);
+        }
+        Word lastWord = candidate.words[candidate.words.length - 1];
+        String key = lastWord.reading + "," + lastWord.lid + "," + lastWord.rid + "," + lastWord.surface;
+        try {
+            String values = (String) mBTreePredictionDic.find(key);
+            if (values != null){
+                for (String value : values.split("\t")) {
+                    set.add(new Candidate(new Word(value)));
+                }
+            }
+        } catch (IOException ignored) {
+        }
+        return set.toArray(new Candidate[0]);
+    }
+
     public Candidate[] buildConversionCandidate(CharSequence cs, int splitPos) {
         String reading = cs.toString();
         int len = reading.length();
         int nBest = 20;
-        Set<String> surfaceCheckSet = new HashSet<>();        // 表記重複チェック用
-
-        ArrayList<Candidate> candidates = new ArrayList<>();
+        Set<Candidate> set = new LinkedHashSet<>(); // 追加順保持
 
         // 前半はグラフを作って前向きDP
         List<List<Node>> graph = buildGraph(reading, splitPos);
+
         // 後半は優先度キューを使ってたどるノードを選んでいく
-        List<Node> bestNodes = new ArrayList<>();
         PriorityQueue<Node> pq = new PriorityQueue<>();
         // まず、優先度キューにゴールノード(EOS)を挿入する
         Node goalNode = graph.get(len + 1).get(0);
@@ -349,14 +372,19 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             Node node = pq.poll();
             if (node.startPos == 0) {
                 // 取り出したノードがスタートノードであった場合、そのノードを結果に追加する
-                String surface = node.getSurface();
-                if (!surfaceCheckSet.contains(surface)) {
-                    // 表記が同じならばコストの低いものだけ、後から出てくるのはコストが高い
-                    surfaceCheckSet.add(surface);
-                    bestNodes.add(node);
-                    if (bestNodes.size() >= nBest) {
-                        break; //
-                    }
+                ArrayList<Word> words = new ArrayList<>();
+                StringBuilder sbReading = new StringBuilder();
+                StringBuilder sbSurface = new StringBuilder();
+                // BOSとEOSは含まない
+                for (Node n = node.next; n.next != null; n = n.next) {
+                    sbReading.append(n.word.reading);
+                    sbSurface.append(n.word.surface);
+                    words.add(n.word);
+                }
+                Candidate candidate = new Candidate(sbReading.toString(), sbSurface.toString(), words);
+                set.add(candidate);
+                if (set.size() >= nBest) {
+                    break;
                 }
             } else {
                 // スタートノードではなかった場合、そのノードに隣接するスタート側のノードのリストを取り出す
@@ -373,28 +401,22 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
                 }
             }
         }
-
-        // n-bestの候補
-        for (Node node : bestNodes) {
-            candidates.add(new Candidate(reading, node));
-        }
-
         // 全角英数
         if (mConvertWideLatin) {
             String s = Converter.toWideLatin(reading);
             if (!s.equals(reading)) {
-                candidates.add(new Candidate(reading, s));
+                set.add(new Candidate(reading, s));
             }
         }
         // 半角カナ
         if (mConvertHalfKana) {
             String s = Converter.toHalfKatakana(reading);
             if (!s.equals(reading)) {
-                candidates.add(new Candidate(reading, s));
+                set.add(new Candidate(reading, s));
             }
         }
 
-        return candidates.toArray(new Candidate[0]);
+        return set.toArray(new Candidate[0]);
     }
 
     private List<List<Node>> buildGraph(String str, int splitPos) {
@@ -403,11 +425,8 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         for (int i = 0; i <= (len + 1); i++) {
             graph.add(i, new ArrayList<>());
         }
-        Node bos = new Node(0, "", new Word("0,0,0,BOS"));
-        Node eos = new Node(len + 1, "", new Word("0,0,0,EOS"));
-
-        graph.get(0).add(bos); // BOS
-        graph.get(len + 1).add(eos); // EOS
+        graph.get(0).add(new Node(0, Word.bos)); // BOS
+        graph.get(len + 1).add(new Node(len + 1, Word.eos)); // EOS
 
         // endPos文字目で終わる単語リストを作成
         for (int startPos = 1; startPos <= len; startPos++) {
@@ -420,13 +439,13 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
                 }
                 String reading = str.substring(startPos - 1, endPos);
                 // 単語リストを探す
-                ArrayList<Word> words = findWords(reading);
+                Set<Word> words = findWords(reading);
                 if (words.isEmpty()) {
                     // 単語が見つからない場合は1文字を1単語となるダミーノードを登録する
                     continue;
                 }
                 for (Word word : words) {
-                    Node node = new Node(startPos, reading, word);
+                    Node node = new Node(startPos, word);
                     graph.get(endPos).add(node);
                 }
             }
@@ -453,4 +472,5 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         }
         return graph;
     }
+
 }
