@@ -24,7 +24,10 @@ import androidx.preference.PreferenceManager;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -202,7 +205,17 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
             Tuple tuple = new Tuple();
             TupleBrowser browser = mBTreeLearningDic.browse();
             while (browser.getNext(tuple)) {
-                list.add(tuple.getKey() + "\t" + tuple.getValue());
+                StringBuilder sb = new StringBuilder((String) tuple.getKey());
+                byte[] byteArray = (byte[]) tuple.getValue();
+                DataInputStream dis = new DataInputStream(new ByteArrayInputStream(byteArray));
+                while (dis.available() > 0) {
+                    short lid = dis.readShort();
+                    short rid = dis.readShort();
+                    short cost = dis.readShort();
+                    String surface = dis.readUTF();
+                    sb.append("\t" + lid + "," + rid + "," + cost + "," + surface);
+                }
+                list.add(sb.toString());
             }
         } catch (IOException ignored) {
         }
@@ -217,51 +230,51 @@ public class Dictionary implements SharedPreferences.OnSharedPreferenceChangeLis
         }
     }
 
-    // 学習辞書とシステム辞書から語句を探す
-    private Set<Word> findWords(String key) {
+    //
+    private Set<Word> findWords(String key, BTree btree) {
         Set<Word> set = new HashSet<>();
-        // 学習辞書
         try {
-            String values = (String) mBTreeLearningDic.find(key);
-            if (values != null) {
-                for (String value : values.split("\t")) {
-                    set.add(new Word(key, value));
-                }
-            }
-        } catch (IOException ignored) {
-        }
-        // システム辞書
-        try {
-            String values = (String) mBTreeSystemDic.find(key);
-            if (values != null) {
-                for (String value : values.split("\t")) {
-                    set.add(new Word(key, value));
+            byte[] byteArray = (byte[]) btree.find(key);
+            if (byteArray != null) {
+                DataInputStream dis = new DataInputStream(new ByteArrayInputStream(byteArray));
+                while (dis.available() > 0) {
+                    short lid = dis.readShort();
+                    short rid = dis.readShort();
+                    short cost = dis.readShort();
+                    String surface = dis.readUTF();
+                    set.add(new Word(key, lid, rid, cost, surface));
                 }
             }
         } catch (IOException ignored) {
         }
         return set;
     }
+    // 学習辞書とシステム辞書から語句を探す
+    private Set<Word> findWords(String key) {
+        Set<Word> set = findWords(key, mBTreeLearningDic);
+        set.addAll(findWords(key, mBTreeSystemDic));
+        return set;
+    }
 
     // 学習辞書に語句を追加する
     private void addLearningWord(Word word) {
+        System.out.println(word);
         try {
             Set<Word> set = new HashSet<>();
+            // 今回の語句を最初に追加しておく
             set.add(word);
-            String values = (String) mBTreeLearningDic.find(word.reading);
-            if (values != null) {
-                for (String value : values.split("\t")) {
-                    set.add(new Word(word.reading, value));
-                }
-            }
-            StringBuilder sb = new StringBuilder();
+            set.addAll(findWords(word.reading, mBTreeLearningDic));
+            // 辞書を更新
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream dos = new DataOutputStream(baos);
             for (Word w : set) {
-                if (sb.length() != 0) {
-                    sb.append("\t");
-                }
-                sb.append(w.getValue());
+                dos.writeShort(w.lid);
+                dos.writeShort(w.rid);
+                dos.writeShort(w.cost);
+                dos.writeUTF(w.surface);
             }
-            mBTreeLearningDic.insert(word.reading, sb.toString(), true);
+            byte[] byteArray = baos.toByteArray();
+            mBTreeLearningDic.insert(word.reading, byteArray, true);
             mRecmanLearningDic.commit();
         } catch (IOException ignored) {
         }

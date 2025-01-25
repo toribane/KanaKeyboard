@@ -29,6 +29,14 @@ public class Word implements Comparable<Word> {
     public static final Word bos = new Word("", "0,0,0,BOS");
     public static final Word eos = new Word("", "0,0,0,EOS");
 
+    public Word(String key, short lid, short rid, short cost, String surface) {
+        this.reading = key;
+        this.lid = lid;
+        this.rid = rid;
+        this.cost = cost;
+        this.surface = surface;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
